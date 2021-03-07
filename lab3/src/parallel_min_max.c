@@ -38,25 +38,37 @@ int main(int argc, char **argv) {
 
     switch (c) {
       case 0:         // если getopt_long() вернул 0, то работаем с fork() (я так поняла, это если мы не ввели f и не вызвали ошибку)
-        printf("started case c-0\n");
+        //printf("started case c-0\n");
         switch (option_index) {    //проходимся по списку options и для первых трех считываем значения обязательных аргументов
           case 0:
-            printf("startted case 0\n");
+            //printf("startted case 0\n");
             seed = atoi(optarg);     // atoi() используется для приведения (конвертации) строки в числовой вид
             // your code here
             // error handling
+            if (seed <= 0) {
+                printf("seed is a positive number\n");
+                return 1;
+            }
             break;
           case 1:
-            printf("startted case 1\n");
+            //printf("startted case 1\n");
             array_size = atoi(optarg);
             // your code here
             // error handling
+            if (array_size <= 0) {
+                printf("array_size is a positive number\n");
+                 return 1;
+            }
             break;
           case 2:
-            printf("startted case 2\n");
+            //printf("startted case 2\n");
             pnum = atoi(optarg);        //кол-во потоков
             // your code here
             // error handling
+            if (pnum <= 0) { 
+                printf("pnum is a positive number\n");
+                return 1;
+            }
             break;
           case 3:
             with_files = true;
@@ -67,7 +79,7 @@ int main(int argc, char **argv) {
         }
         break;
       case 'f':
-        printf("started case f\n");       //если ввели f, работаем с файлами
+        //printf("started case f\n");       //если ввели f, работаем с файлами
         with_files = true;
         break;
 
@@ -92,40 +104,58 @@ int main(int argc, char **argv) {
   //формирование массива
   int *array = malloc(sizeof(int) * array_size); 
   GenerateArray(array, array_size, seed);
+  int i;
+  for (i = 0; i < array_size; i++)   //выводим массив
+  {
+    printf("%d ", array[i]);
+  }
+  printf("\n");
+  int sub_array_size = array_size / pnum;  //находим длинну отрезка массива, который будем проходить в каждом процессе
+
   int active_child_processes = 0;
 
   //переменная времени начала
   struct timeval start_time;
   gettimeofday(&start_time, NULL);
 
-  //создаем "ключ" для трубы и проверяем на ошибки при создании
-  int my_pipe[2];                   
-  if (pipe(my_pipe)==-1){
-      printf("An error occured when opening the pipe\n");
-      return 2;
-  }
+  //создаем массив "ключей" для труб 
+  int *array_of_pipes_read = malloc(sizeof(int) * pnum);
 
  //подключение многопоточности
   for (int i = 0; i < pnum; i++) {
-
+    int my_pipe[2];                     //создаем "ключ" для трубы и проверяем на ошибки при создании
+    if (!with_files){                   
+        if (pipe(my_pipe)==-1){
+            printf("An error occured when opening the pipe\n");
+            return 2;
+        }
+    }
     pid_t child_pid = fork();      // https://www.youtube.com/watch?v=9seb8hddeK4
     if (child_pid >= 0) {
       // successful fork 
       active_child_processes += 1;
       if (child_pid == 0) {
         // child process
-
+        struct MinMax local_min_max;
         // parallel somehow
+        if (i!=pnum-1)                    //создаем структуру с локальным максимумом и минимумом для кажного отрезка
+        {
+            local_min_max = GetMinMax(array, i * sub_array_size, (i+1) * sub_array_size); 
+        }
+        else local_min_max = GetMinMax(array, i * sub_array_size, array_size);
 
         if (with_files) {          //если работаем с файлами
           // use files here
         } else {                   // https://www.youtube.com/watch?v=Mqb2dVRe0uo
           // use pipe here
             close(my_pipe[0]);    //закрыли конец трубы для чтения
-            write(my_pipe[1],&array[i], sizeof(int));  //засовываем число в трубу
+            write(my_pipe[1],&local_min_max,sizeof(struct MinMax));  //засовываем число в трубу
             close(my_pipe[1]);    //закрыли другой конец
         }
         return 0;
+      }
+      else{                 //процесс-родитель
+        array_of_pipes_read[i] = my_pipe[0];    //сохраняем данные о трубе для данного процесса
       }
 
     } else {
@@ -136,7 +166,7 @@ int main(int argc, char **argv) {
 
   while (active_child_processes > 0) {            // пока есть активные процессы-дети, для каждого что-то выполняем  и он 
     // your code here                             //заканчивает работу, после чего учитываем это в числе активных детей
-
+    wait(NULL);               //ждем окончания выполнения процесса-ребенка
     active_child_processes -= 1;
   }
 
@@ -145,21 +175,20 @@ int main(int argc, char **argv) {
   min_max.max = INT_MIN;
 
   for (int i = 0; i < pnum; i++) {      //ищем максимальный и минимальный элемент
-    int min = INT_MAX;
-    int max = INT_MIN;
+    struct MinMax process_min_max;
+    process_min_max.min = INT_MAX;
+    process_min_max.max = INT_MIN;
 
     if (with_files) {
       // read from files
     } else {
-      // read from pipes                //считываем число из трубы для сравнения
-        close(my_pipe[1]);
-        read(my_pipe[0],&min,sizeof(int));
-        max=min;
-        close(my_pipe[0]);
+      // read from pipes                //считываем локальный минимум и максимум из трубы для сравнения
+        read(array_of_pipes_read[i],&process_min_max,sizeof(int));
+        close(array_of_pipes_read[i]);
     }
 
-    if (min < min_max.min) min_max.min = min;
-    if (max > min_max.max) min_max.max = max;
+    if (process_min_max.min < min_max.min) min_max.min = process_min_max.min;
+    if (process_min_max.max > min_max.max) min_max.max = process_min_max.max;
   }
 
    //структура времени завершения
