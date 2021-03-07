@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
         }
         break;
       case 'f':
-        //printf("started case f\n");       //если ввели f, работаем с файлами
+        printf("Working with files: ON\n");       //если ввели f, работаем с файлами
         with_files = true;
         break;
 
@@ -206,7 +206,7 @@ int main(int argc, char **argv) {
         }
     } else {
       // read from pipes                //считываем локальный минимум и максимум из трубы для сравнения
-        read(array_of_pipes_read[i],&process_min_max,sizeof(int));
+        read(array_of_pipes_read[i],&process_min_max,sizeof(struct MinMax));
         close(array_of_pipes_read[i]);
     }
 
