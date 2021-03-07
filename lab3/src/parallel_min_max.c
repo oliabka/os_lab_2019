@@ -38,19 +38,23 @@ int main(int argc, char **argv) {
 
     switch (c) {
       case 0:         // если getopt_long() вернул 0, то работаем с fork() (я так поняла, это если мы не ввели f и не вызвали ошибку)
+        printf("started case c-0\n");
         switch (option_index) {    //проходимся по списку options и для первых трех считываем значения обязательных аргументов
           case 0:
+            printf("startted case 0\n");
             seed = atoi(optarg);     // atoi() используется для приведения (конвертации) строки в числовой вид
             // your code here
             // error handling
             break;
           case 1:
+            printf("startted case 1\n");
             array_size = atoi(optarg);
             // your code here
             // error handling
             break;
           case 2:
-            pnum = atoi(optarg);
+            printf("startted case 2\n");
+            pnum = atoi(optarg);        //кол-во потоков
             // your code here
             // error handling
             break;
@@ -62,7 +66,8 @@ int main(int argc, char **argv) {
             printf("Index %d is out of options\n", option_index);
         }
         break;
-      case 'f':          //если ввели f, работаем с файлами
+      case 'f':
+        printf("started case f\n");       //если ввели f, работаем с файлами
         with_files = true;
         break;
 
@@ -89,12 +94,20 @@ int main(int argc, char **argv) {
   GenerateArray(array, array_size, seed);
   int active_child_processes = 0;
 
-  //переменная времени
+  //переменная времени начала
   struct timeval start_time;
   gettimeofday(&start_time, NULL);
 
+  //создаем "ключ" для трубы и проверяем на ошибки при создании
+  int my_pipe[2];                   
+  if (pipe(my_pipe)==-1){
+      printf("An error occured when opening the pipe\n");
+      return 2;
+  }
+
  //подключение многопоточности
   for (int i = 0; i < pnum; i++) {
+
     pid_t child_pid = fork();      // https://www.youtube.com/watch?v=9seb8hddeK4
     if (child_pid >= 0) {
       // successful fork 
@@ -106,8 +119,11 @@ int main(int argc, char **argv) {
 
         if (with_files) {          //если работаем с файлами
           // use files here
-        } else {
+        } else {                   // https://www.youtube.com/watch?v=Mqb2dVRe0uo
           // use pipe here
+            close(my_pipe[0]);    //закрыли конец трубы для чтения
+            write(my_pipe[1],&array[i], sizeof(int));  //засовываем число в трубу
+            close(my_pipe[1]);    //закрыли другой конец
         }
         return 0;
       }
@@ -118,7 +134,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  while (active_child_processes > 0) {            // пока есть активные процессы-дети, для каждого что-то выполдняем  и он 
+  while (active_child_processes > 0) {            // пока есть активные процессы-дети, для каждого что-то выполняем  и он 
     // your code here                             //заканчивает работу, после чего учитываем это в числе активных детей
 
     active_child_processes -= 1;
@@ -128,14 +144,18 @@ int main(int argc, char **argv) {
   min_max.min = INT_MAX;
   min_max.max = INT_MIN;
 
-  for (int i = 0; i < pnum; i++) {
+  for (int i = 0; i < pnum; i++) {      //ищем максимальный и минимальный элемент
     int min = INT_MAX;
     int max = INT_MIN;
 
     if (with_files) {
       // read from files
     } else {
-      // read from pipes
+      // read from pipes                //считываем число из трубы для сравнения
+        close(my_pipe[1]);
+        read(my_pipe[0],&min,sizeof(int));
+        max=min;
+        close(my_pipe[0]);
     }
 
     if (min < min_max.min) min_max.min = min;
