@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
         // child process
         struct MinMax local_min_max;
         // parallel somehow
-        if (i!=pnum-1)                    //создаем структуру с локальным максимумом и минимумом для кажного отрезка
+        if (i!=(pnum-1))                    //создаем структуру с локальным максимумом и минимумом для кажного отрезка
         {
             local_min_max = GetMinMax(array, i * sub_array_size, (i+1) * sub_array_size); 
         }
@@ -146,6 +146,18 @@ int main(int argc, char **argv) {
 
         if (with_files) {          //если работаем с файлами
           // use files here
+          char* str = (char*)malloc(16*sizeof(char));
+          sprintf(str, "data_%d.txt", i);
+          FILE * fp = fopen (str, "a");         //создаем очередной файл
+          if (fp==0)
+            {
+                printf( "Could not open file\n" );
+                return -1;
+            }
+            else
+            {
+                 fwrite(&local_min_max, sizeof(struct MinMax), 1, fp);       //записываем структуру в файл
+            }
         } else {                   // https://www.youtube.com/watch?v=Mqb2dVRe0uo
           // use pipe here
             close(my_pipe[0]);    //закрыли конец трубы для чтения
@@ -181,6 +193,17 @@ int main(int argc, char **argv) {
 
     if (with_files) {
       // read from files
+        char* str = (char*)malloc(16*sizeof(char));      
+        sprintf(str, "data_%d.txt", i);
+        FILE * fp = fopen (str, "r");          //открываем очередной файл
+        if (fp==0){
+            printf( "Could not open file\n" );
+            return 1;
+        }
+        else
+        {
+            fread(&process_min_max, sizeof(struct MinMax), 1, fp);   //считываем структуру из файла
+        }
     } else {
       // read from pipes                //считываем локальный минимум и максимум из трубы для сравнения
         read(array_of_pipes_read[i],&process_min_max,sizeof(int));
