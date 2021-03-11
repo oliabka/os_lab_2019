@@ -1,6 +1,8 @@
-TARGETS = sequential_min_max parallel_min_max exec_demo
+TARGETS=sequential_min_max parallel_min_max exec_demo
 CC=gcc
 CFLAGS=-I.
+
+.PHONY: all clean
 
 all: $(TARGETS)
 

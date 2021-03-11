@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
     printf("%d ", array[i]);
   }
   printf("\n");
-  int sub_array_size = array_size / pnum;  //находим длинну отрезка массива, который будем проходить в каждом процессе
+  int sub_array_size = array_size / pnum; //находим длинну отрезка массива, который будем проходить в каждом процесс
 
   int active_child_processes = 0;
 
@@ -203,6 +203,7 @@ int main(int argc, char **argv) {
         else
         {
             fread(&process_min_max, sizeof(struct MinMax), 1, fp);   //считываем структуру из файла
+            remove(str);
         }
     } else {
       // read from pipes                //считываем локальный минимум и максимум из трубы для сравнения
