@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 
+#include <sys/types.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -20,6 +22,7 @@ int main(int argc, char **argv) {
   int array_size = -1;
   int pnum = -1;
   bool with_files = false;
+  int timeout = -1;
 
   while (true) {
     int current_optind = optind ? optind : 1;
@@ -28,6 +31,7 @@ int main(int argc, char **argv) {
                                       {"array_size", required_argument, 0, 0},
                                       {"pnum", required_argument, 0, 0},
                                       {"by_files", no_argument, 0, 'f'},
+                                      {"timeout", optional_argument, 0, 0},    //lab4
                                       {0, 0, 0, 0}};
 
     int option_index = 0;
@@ -73,6 +77,16 @@ int main(int argc, char **argv) {
           case 3:
             with_files = true;
             break;
+            //lab4
+          case 4:
+            timeout = atoi(optarg);
+            printf("timeout has been set to %d", timeout);
+            if (timeout <= 0) { 
+                printf("timeout is a positive number\n");
+                return 1;
+            }
+            break;
+            //lab4
 
           defalut:
             printf("Index %d is out of options\n", option_index);
