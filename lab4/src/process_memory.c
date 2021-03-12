@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 /* Below is a macro definition */
-#define SHW_ADR(ID, I) (printf("ID %s \t is at virtual address: %8X\n", ID, &I))
+#define SHW_ADR(ID, I) (printf("ID %s \t is at virtual address: %8X\n", ID, &I))   //выводит что где лежит; название, а потом место
 
 extern int etext, edata, end; /* Global variables for process
                                  memory */
@@ -21,18 +21,18 @@ main() {
   int i = 0; /* Automatic variable */
 
   /* Printing addressing information */
-  printf("\nAddress etext: %8X \n", &etext);
-  printf("Address edata: %8X \n", &edata);
-  printf("Address end  : %8X \n", &end);
+  printf("\nAddress etext: %8X \n", &etext); //This is the first address past the end of the text segment (the program code).
+  printf("Address edata: %8X \n", &edata);  //This is the first address past the end of the initialized data segment.
+  printf("Address end  : %8X \n", &end);   //This is the first address past the end of the uninitialized data segment.
 
-  SHW_ADR("main", main);
-  SHW_ADR("showit", showit);
-  SHW_ADR("cptr", cptr);
-  SHW_ADR("buffer1", buffer1);
-  SHW_ADR("i", i);
-  strcpy(buffer1, "A demonstration\n");   /* Library function */
-  write(1, buffer1, strlen(buffer1) + 1); /* System call */
-  showit(cptr);
+  SHW_ADR("main", main);         //где лежит функуия main
+  SHW_ADR("showit", showit);     //где лежит функия showit
+  SHW_ADR("cptr", cptr);         //где лежит статический массив символов 
+  SHW_ADR("buffer1", buffer1);   //где лежит динамический массив символов
+  SHW_ADR("i", i);               //где ледит int переменная
+  strcpy(buffer1, "A demonstration\n");   /* Library function */     //кладем в буффер символы "A demonstration\n"
+  write(1, buffer1, strlen(buffer1) + 1); /* System call */          //записывает в standard output содержание буфффера
+  showit(cptr);    
 
 } /* end of main function */
 
