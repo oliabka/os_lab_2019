@@ -4,16 +4,18 @@
 #include <sys/time.h>
 #include <getopt.h>
 #include <pthread.h>
+#include <unistd.h>
 
+#include "sum.h"
 #include "utils.h"
 
-struct SumArgs {
+/*struct SumArgs {
   int *array;
   int begin;
   int end;
-};
+};*/
 
-int Sum(const struct SumArgs *args) {
+/*int Sum(const struct SumArgs *args) {
     int sum = 0;
     int i;
     for (i=(*(args)).begin; i<(*(args)).end;i++)
@@ -21,7 +23,7 @@ int Sum(const struct SumArgs *args) {
         sum+=*((*(args)).array+i);
     }
     return sum;
-}
+}*/
 
 void *ThreadSum(void *args) {
   struct SumArgs *sum_args = (struct SumArgs *)args;
@@ -36,9 +38,9 @@ int main(int argc, char **argv) {
    *	seed by command line arguments
    */
 
-  uint32_t threads_num = 0;
-  uint32_t array_size = 0;
-  uint32_t seed = 0;
+  uint32_t threads_num = -1;
+  uint32_t array_size = -1;
+  uint32_t seed = -1;
   pthread_t threads[threads_num];
 
   int current_optind = optind ? optind : 1;
@@ -112,12 +114,23 @@ int main(int argc, char **argv) {
   }
   printf("\n");
 
+  int sub_array_size = array_size / threads_num;
+
   struct SumArgs args[threads_num];
   for (uint32_t i = 0; i < threads_num; i++) {
-    if (pthread_create(&threads[i], NULL, ThreadSum, (void *)&args)) {
+      args[i].begin = i * sub_array_size;
+      if (i!=(threads_num-1))
+      {
+          args[i].end = (i+1) * sub_array_size;          
+      }
+      else{
+          args[i].end = array_size;
+      }
+      args[i].array=array;
+      if (pthread_create(&threads[i], NULL, ThreadSum, (void *)&args)) {
       printf("Error: pthread_create failed!\n");
       return 1;
-    }
+      }
   }
 
   int total_sum = 0;
@@ -125,7 +138,7 @@ int main(int argc, char **argv) {
     int sum = 0;
     pthread_join(threads[i], (void **)&sum);
     total_sum += sum;
-  }
+  } 
 
   struct timeval finish_time;
   gettimeofday(&finish_time, NULL);
