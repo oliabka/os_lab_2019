@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <sys/types.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -17,10 +16,24 @@
 #include "find_min_max.h"
 #include "utils.h"
 
+//lab4
+int*  PID_id;
+int pnum;
+void kill_all(int sig) //функция для "убийства" всех дочерних процессов
+{
+    for (int i=0;i<pnum;i++)   //для всех процессов
+    {
+        kill(PID_id[i], SIGKILL);   //передирает id процессов и каждому посылает сигнал SIGKILL
+    }
+    printf("TIMEOUT\n");
+}
+//lab4
+
 int main(int argc, char **argv) {
+
   int seed = -1;
   int array_size = -1;
-  int pnum = -1;
+  pnum = -1;
   bool with_files = false;
   int timeout = -1;
 
@@ -31,7 +44,7 @@ int main(int argc, char **argv) {
                                       {"array_size", required_argument, 0, 0},
                                       {"pnum", required_argument, 0, 0},
                                       {"by_files", no_argument, 0, 'f'},
-                                      {"timeout", optional_argument, 0, 0},    //lab4
+                                      {"timeout", required_argument, 0, 0},    //lab4
                                       {0, 0, 0, 0}};
 
     int option_index = 0;
@@ -80,7 +93,7 @@ int main(int argc, char **argv) {
             //lab4
           case 4:
             timeout = atoi(optarg);
-            printf("timeout has been set to %d", timeout);
+            printf("Timeout has been set to %d\n", timeout);
             if (timeout <= 0) { 
                 printf("timeout is a positive number\n");
                 return 1;
@@ -189,6 +202,17 @@ int main(int argc, char **argv) {
       return 1;
     }
   }
+ 
+ //lab4
+  printf("Timeout now: %d\n" ,timeout);   //выводит время перед началом таймаута
+  if (timeout > 0)
+  {
+    PID_id = array_of_pipes_read;     //записывает id созданных дочерних процессов
+    alarm(timeout);                   //отсчитывает время для таймаута
+    signal(SIGALRM,kill_all);         //посылает сигнал всем дочерним процессам
+    sleep(1);                         //ждет на случай если на передачу сигнала нужно время
+  }
+ //lab4 
 
   while (active_child_processes > 0) {            // пока есть активные процессы-дети, для каждого что-то выполняем  и он 
     // your code here                             //заканчивает работу, после чего учитываем это в числе активных детей
