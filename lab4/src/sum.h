@@ -8,5 +8,6 @@ struct SumArgs {
 };
 
 int Sum(struct SumArgs *args);
+//int Sum(int* array,int begin,int end);
 
 #endif

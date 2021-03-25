@@ -1,4 +1,4 @@
-TARGETS=memory parallel_min_max
+TARGETS=memory parallel_min_max psum
 CC=gcc
 CFLAGS=-I.
 
@@ -7,7 +7,7 @@ CFLAGS=-I.
 all: $(TARGETS)
 
 psum: utils.o utils.h sum.o sum.h
-	$(CC) -o psum utils.o sum.o parallel_sum.c  $(CFLAGS)
+	$(CC) -pthread -o psum utils.o sum.o parallel_sum.c  $(CFLAGS)
 
 parallel_min_max : utils.o find_min_max.o utils.h find_min_max.h
 	$(CC) -o parallel_min_max utils.o find_min_max.o parallel_min_max.c $(CFLAGS)
