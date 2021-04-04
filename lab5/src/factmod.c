@@ -10,35 +10,30 @@ struct parameters
     int begin;
     int end;
     int p;
-};
-
-struct everything
-{
-    struct parameters pp;
-    int common;
+    int *c;
 };
 
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
-//int common =0;
+int common =1;
 
-void calculation(struct everything* input)
+void calculation(struct parameters* input)
 {
     //считает для всех элементов начиная с начала и до конца
     //https://www.cyberforum.ru/cpp-beginners/thread2043433.html
     int f;
     pthread_mutex_lock(&mut);
-    f = (*input).common;
+    f = *((*input).c);
     printf("Starting calculation\n");
-    printf("Input data: beginning = %d, end = %d, p = %d, common = %d\n", ((*input).pp).begin, (((*input).pp).end), ((*input).pp).p, (*input).common);
+    printf("Input data: beginning = %d, end = %d, p = %d, common = %d\n", (*input).begin, (*input).end, (*input).p, *((*input).c));
     printf("f = %d\n", f);
-    int n = (((*input).pp).end) - 1;
+    int n = ((*input).end) - 1;
     printf("n = %d\n", n);
-    for (; (n >= ((*input).pp).begin); n--)
+    for (; (n >= (*input).begin); n--)
     {
-        f = (f * n) % ((*input).pp).p;
+        f = (f * n) % (*input).p;
         printf("f = %d, n = %d\n", f, n);
     }
-    (*input).common = f;
+    *((*input).c) = f;
     pthread_mutex_unlock(&mut);
 };
 
@@ -111,8 +106,6 @@ int main(int argc, char** argv) {
     /*------------Working with threads---------------------------------------------------*/
     //https://stackoverflow.com/questions/266168/simple-example-of-threading-in-c
     pthread_t threads[p_num];
-    struct everything ever;
-    ever.common = 1;
     for (uint32_t i = 0; i < p_num; i++) {
         params[i].begin = i * sizeforthread + 1;
         printf("First element in thred %d: %d\n", i, params[i].begin);
@@ -125,22 +118,18 @@ int main(int argc, char** argv) {
         }
         printf("Last element in thred %d: %d\n", i, params[i].end - 1);
         params[i].p = mod;
-        ever.pp = params[i];
-        if (pthread_create(&threads[i], NULL, (void*)calculation, (void*)&ever)) {
-            //if (pthread_create(&threads[i], NULL, calculation, (void*)&params[i])) {
+        params[i].c=&common;
+        if (pthread_create(&threads[i], NULL, (void*)calculation, (void*)&params[i])) {
             printf("Error: pthread_create failed!\n");
             return 1;
         }
+    }
+    for (uint32_t i = 0; i < p_num; i++) {
         if (pthread_join(threads[i], NULL) != 0) {
-            perror("pthread_join");
-            exit(1);
+        perror("pthread_join");
+        exit(1);
         }
     }
- /*for (uint32_t i = 0; i < p_num; i++) {
- if (pthread_join(threads[i], NULL) != 0) {
-   perror("pthread_join");
-   exit(1);
- }*/
- printf("All done, counter = %d\n", ever.common);
- return 0;
+    printf("All done, counter = %d\n", common);
+    return 0;
 }
