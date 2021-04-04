@@ -27,6 +27,8 @@ int common = 0;
        int work;
        pthread_mutex_lock(&lock1);           // Execution step 1
        pthread_mutex_lock(&lock2);           // Execution step 3 DEADLOCK!!!
+       
+                
        printf("doing one thing\n");
        work = *pnum_times;
        printf("counter = %d\n", work);
@@ -34,6 +36,8 @@ int common = 0;
        for (k = 0; k < 500000; k++)
          ;                 /* long cycle */
        *pnum_times = work; /* write back */
+
+
        pthread_mutex_lock(&lock2);
        pthread_mutex_lock(&lock1);
     } 
@@ -44,6 +48,8 @@ int common = 0;
        int work;
        pthread_mutex_lock(&lock2);           // Execution step 2
        pthread_mutex_lock(&lock1);
+
+
        printf("doing one thing\n");
        work = *pnum_times;
        printf("counter = %d\n", work);
@@ -51,6 +57,8 @@ int common = 0;
        for (k = 0; k < 500000; k++)
          ;                 /* long cycle */
        *pnum_times = work; /* write back */
+
+       
        pthread_mutex_lock(&lock1);
        pthread_mutex_lock(&lock2);
     } 
