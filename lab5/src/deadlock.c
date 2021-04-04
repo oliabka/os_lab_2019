@@ -11,7 +11,7 @@ If the first pthread_mutex_lock is applied and the second pthread_mutex_lock fai
  Deadlock — это программа, в которой все параллельные процессы ожидают друг друга. 
  В этом состоянии программа никогда не восстановится без вмешательства извне.
  */
-
+// https://www.cs.cmu.edu/afs/cs/academic/class/15492-f07/www/pthreads.html#SCHEDULING
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -58,7 +58,7 @@ int common = 0;
          ;                 /* long cycle */
        *pnum_times = work; /* write back */
 
-       
+
        pthread_mutex_lock(&lock1);
        pthread_mutex_lock(&lock2);
     } 
