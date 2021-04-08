@@ -16,6 +16,7 @@ If the first pthread_mutex_lock is applied and the second pthread_mutex_lock fai
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 pthread_mutex_t lock1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lock2 = PTHREAD_MUTEX_INITIALIZER;
@@ -26,6 +27,7 @@ int common = 0;
        unsigned long k;
        int work;
        pthread_mutex_lock(&lock1);           // Execution step 1
+       sleep(5);
        pthread_mutex_lock(&lock2);           // Execution step 3 DEADLOCK!!!
        
                 
@@ -38,8 +40,8 @@ int common = 0;
        *pnum_times = work; /* write back */
 
 
-       pthread_mutex_lock(&lock2);
-       pthread_mutex_lock(&lock1);
+       pthread_mutex_unlock(&lock2);
+       pthread_mutex_unlock(&lock1);
     } 
 
     void function2(int *pnum_times)
@@ -50,7 +52,7 @@ int common = 0;
        pthread_mutex_lock(&lock1);
 
 
-       printf("doing one thing\n");
+       printf("doing other thing\n");
        work = *pnum_times;
        printf("counter = %d\n", work);
        work++; /* increment, but not write */
@@ -59,8 +61,8 @@ int common = 0;
        *pnum_times = work; /* write back */
 
 
-       pthread_mutex_lock(&lock1);
-       pthread_mutex_lock(&lock2);
+       pthread_mutex_unlock(&lock1);
+       pthread_mutex_unlock(&lock2);
     } 
   
     int main()
@@ -68,7 +70,7 @@ int common = 0;
        pthread_t thread1, thread2;
 
        pthread_create(&thread1, NULL, (void*)function1, (void *)&common);
-       pthread_create(&thread2, NULL, (void*)function1, (void *)&common);
+       pthread_create(&thread2, NULL, (void*)function2, (void *)&common);
        if (pthread_join(thread1, NULL) != 0) 
        {
             perror("pthread_join");
