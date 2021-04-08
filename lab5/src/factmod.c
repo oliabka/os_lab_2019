@@ -97,6 +97,8 @@ int main(int argc, char** argv) {
     /*------------Working out the algorithm-----------------------------------------------
     получается чтобы посчитать факториал по частям, нужно разделить наш массив чисел
     от 1 до n разделить на более-менее равные части */
+    if (p_num>k)
+        p_num=k; 
     int sizeforthread = p_num <= k ? (k / p_num) : 1;  //находим размер одного подмножества
     printf("ELements in one process: %d\n", sizeforthread);
     struct parameters params[p_num];
