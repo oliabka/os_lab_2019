@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include <errno.h>
 #include <getopt.h>
@@ -12,10 +13,57 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+int common =1;
+
 struct Server {
   char ip[255];
   int port;
 };
+
+struct AllData
+{
+    int begin;
+    int end;
+    int p;
+    int *c;
+    char ip[255];
+    int port;
+};
+
+void ServerHanddler(void* data)
+{
+    struct AllData d=*((struct AllData*)data);
+    int f;
+    pthread_mutex_lock(&mut);
+    f=*(d.c);
+    //пока копирую из примера
+    struct hostent *hostname = gethostbyname(d.ip);   //returns a pointer to the hostent structure described above.
+    if (hostname == NULL) {
+      fprintf(stderr, "gethostbyname failed with %s\n",d.ip);
+      exit(1);
+    }
+
+    struct sockaddr_in server;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(d.port);
+    server.sin_addr.s_addr = *((unsigned long *)hostname->h_addr);
+
+    int sck = socket(AF_INET, SOCK_STREAM, 0);
+    if (sck < 0) {
+      fprintf(stderr, "Socket creation failed!\n");
+      exit(1);
+    }
+
+    if (connect(sck, (struct sockaddr *)&server, sizeof(server)) < 0) {
+      fprintf(stderr, "Connection failed\n");
+      exit(1);
+    }
+    /* сюда еще перенести отправку серверу параметров для подсчета */
+    //-------------------------
+    *(d.c) = f;
+    pthread_mutex_unlock(&mut);
+}
 
 uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
   uint64_t result = 0;
@@ -32,7 +80,7 @@ uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
 
 bool ConvertStringToUI64(const char *str, uint64_t *val) {
   char *end = NULL;
-  unsigned long long i = strtoull(str, &end, 10);
+  unsigned long long i = strtoull(str, &end, 10);       //Convert the string to a value of type unsigned long int
   if (errno == ERANGE) {
     fprintf(stderr, "Out of uint64_t range: %s\n", str);
     return false;
@@ -70,10 +118,18 @@ int main(int argc, char **argv) {
       case 0:
         ConvertStringToUI64(optarg, &k);
         // TODO: your code here
+            if (k <= 0) {
+                printf("k is a positive number\n");
+                return 1;
+            }
         break;
       case 1:
         ConvertStringToUI64(optarg, &mod);
         // TODO: your code here
+            if (mod <= 0) {
+                printf("mod is a positive number\n");
+                return 1;
+            }
         break;
       case 2:
         // TODO: your code here
@@ -99,15 +155,16 @@ int main(int argc, char **argv) {
   }
 
   // TODO: for one server here, rewrite with servers from file
-  unsigned int servers_num = 1;
+  /*unsigned int servers_num = 1;
   struct Server *to = malloc(sizeof(struct Server) * servers_num);
   // TODO: delete this and parallel work between servers
   to[0].port = 20001;
-  memcpy(to[0].ip, "127.0.0.1", sizeof("127.0.0.1"));
+  memcpy(to[0].ip, "127.0.0.1", sizeof("127.0.0.1"));   //функция стандартной библиотеки языка программирования Си, 
+                                                        //копирующая содержимое одной области памяти в другую.
 
   // TODO: work continiously, rewrite to make parallel
   for (int i = 0; i < servers_num; i++) {
-    struct hostent *hostname = gethostbyname(to[i].ip);
+    struct hostent *hostname = gethostbyname(to[i].ip);   //returns a pointer to the hostent structure described above.
     if (hostname == NULL) {
       fprintf(stderr, "gethostbyname failed with %s\n", to[i].ip);
       exit(1);
@@ -157,8 +214,59 @@ int main(int argc, char **argv) {
     printf("answer: %llu\n", answer);
 
     close(sck);
+  }*/
+
+  //обработка файла (считаем ко-во сток, создаем массив серверов, записываем в него содержание строк)
+  char buffer[255];
+  int servers_num=0;
+  FILE *fp;
+  fp=fopen(servers, "r");
+  while (fgets(buffer, sizeof(buffer), fp))
+  {
+      servers_num++;
+  }
+  fclose(fp);
+
+  struct AllData* to = malloc(sizeof(struct AllData) * servers_num);
+  fp=fopen(servers, "r");
+  int it =0;
+  while (fgets(buffer, sizeof(buffer), fp))
+  {
+    to[it].port = 20001;
+    memcpy(to[it].ip, buffer, sizeof(buffer));
+    it++;
+  }
+  fclose(fp);
+
+//создаю массив тредов, потом запускаю каждый из них для функции,
+// которая обрабатывает определенный численный интервал на определенном сервере
+int sizeforthread = servers_num <= k ? (k / servers_num) : 1;
+  pthread_t threads[servers_num];
+  for (uint32_t i = 0; i < servers_num; i++) {
+    to[i].begin = i * sizeforthread + 1;
+        printf("First element in thred %d: %d\n", i, to[i].begin);
+        if (i != (servers_num - 1))
+        {
+            to[i].end = to[i].begin + sizeforthread;
+        }
+        else {
+            to[i].end = k + 1;
+        }
+        printf("Last element in thred %d: %d\n", i,to[i].end - 1);
+        to[i].p = mod;
+        to[i].c=&common;
+    if (pthread_create(&threads[i], NULL, (void*)ServerHanddler, (void*)&to[i])) {
+        printf("Error: pthread_create failed!\n");
+        return 1;
+    }
+  }
+  for (uint32_t i = 0; i < servers_num; i++) {
+    if (pthread_join(threads[i], NULL) != 0) {
+    perror("pthread_join");
+    exit(1);
+    }
   }
   free(to);
-
+  printf("All done, counter = %d\n", common);
   return 0;
 }
