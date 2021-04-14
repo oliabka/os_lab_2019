@@ -61,6 +61,7 @@ bool ConvertStringToUI64(const char *str, uint64_t *val) {
 
 void ServerHanddler(void* data)
 {
+    
     struct AllData d=*((struct AllData*)data);
     int f;
 
@@ -269,21 +270,23 @@ int main(int argc, char **argv) {
 
 //создаю массив тредов, потом запускаю каждый из них для функции,
 // которая обрабатывает определенный численный интервал на определенном сервере
+if (servers_num>k)
+    servers_num=k;
 int sizeforthread = servers_num <= k ? (k / servers_num) : 1;
   pthread_t threads[servers_num];
   for (uint32_t i = 0; i < servers_num; i++) {
     to[i].begin = i * sizeforthread + 1;
-        printf("First element in thred %d: %d\n", i, to[i].begin);
-        if (i != (servers_num - 1))
-        {
-            to[i].end = to[i].begin + sizeforthread;
-        }
-        else {
-            to[i].end = k + 1;
-        }
-        printf("Last element in thred %d: %d\n", i,to[i].end - 1);
-        to[i].mod = mod;
-        to[i].c=&common;
+    printf("First element in thred %d: %d\n", i, to[i].begin);
+    if (i != (servers_num - 1))
+    {
+        to[i].end = to[i].begin + sizeforthread;
+    }
+    else {
+        to[i].end = k + 1;
+    }
+    printf("Last element in thred %d: %d\n", i,to[i].end - 1);
+    to[i].mod = mod;
+    to[i].c=&common;
     if (pthread_create(&threads[i], NULL, (void*)ServerHanddler, (void*)&to[i])) {
         printf("Error: pthread_create failed!\n");
         return 1;
