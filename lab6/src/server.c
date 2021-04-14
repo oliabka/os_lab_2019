@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
-
+#include <errno.h>
 #include <getopt.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -20,6 +20,21 @@ struct FactorialArgs {
   uint64_t mod;
 };
 
+bool ConvertStringToUI64(const char *str, uint64_t *val) {
+  char *end = NULL;
+  unsigned long long i = strtoull(str, &end, 10);       //Convert the string to a value of type unsigned long int
+  if (errno == ERANGE) {
+    fprintf(stderr, "Out of uint64_t range: %s\n", str);
+    return false;
+  }
+
+  if (errno != 0)
+    return false;
+
+  *val = i;
+  return true;
+}
+
 uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
   uint64_t result = 0;
   a = a % mod;
@@ -29,15 +44,20 @@ uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
     a = (a * 2) % mod;
     b /= 2;
   }
-
   return result % mod;
 }
 
-uint64_t Factorial(const struct FactorialArgs *args) {
-  uint64_t ans = 1;
-
+uint64_t Factorial(const struct FactorialArgs *p_args) {
+  struct FactorialArgs args=*(p_args);
+  uint64_t ans = args.end-1;
+  printf("Factorial:");
+  printf("ans = %llu\n",ans);
   // TODO: your code here
-
+  for (uint64_t n=args.end-2;n>=args.begin;n-- )
+  {
+      ans=MultModulo(n,ans,args.mod);
+      printf("ans = %llu\n",ans);
+  }
   return ans;
 }
 
@@ -69,10 +89,18 @@ int main(int argc, char **argv) {
       case 0:
         port = atoi(optarg);
         // TODO: your code here
+        if (port <= 0) {
+            printf("port is a positive number\n");
+            return 1;
+        }
         break;
       case 1:
         tnum = atoi(optarg);
         // TODO: your code here
+        if (tnum <= 0) {
+            printf("tnum is a positive number\n");
+            return 1;
+        }
         break;
       default:
         printf("Index %d is out of options\n", option_index);
@@ -134,7 +162,6 @@ int main(int argc, char **argv) {
       unsigned int buffer_size = sizeof(uint64_t) * 3;
       char from_client[buffer_size];
       int read = recv(client_fd, from_client, buffer_size, 0);
-
       if (!read)
         break;
       if (read < 0) {
@@ -146,7 +173,7 @@ int main(int argc, char **argv) {
         break;
       }
 
-      pthread_t threads[tnum];
+      //pthread_t threads[tnum];
 
       uint64_t begin = 0;
       uint64_t end = 0;
@@ -157,8 +184,8 @@ int main(int argc, char **argv) {
 
       fprintf(stdout, "Receive: %llu %llu %llu\n", begin, end, mod);
 
-      struct FactorialArgs args[tnum];
-      for (uint32_t i = 0; i < tnum; i++) {
+      struct FactorialArgs args;
+      /*for (uint32_t i = 0; i < tnum; i++) {
         // TODO: parallel somehow
         args[i].begin = 1;
         args[i].end = 1;
@@ -176,7 +203,11 @@ int main(int argc, char **argv) {
         uint64_t result = 0;
         pthread_join(threads[i], (void **)&result);
         total = MultModulo(total, result, mod);
-      }
+      }*/
+      args.begin = begin;
+      args.end = end;
+      args.mod = mod;
+      uint64_t total = Factorial(&args);
 
       printf("Total: %llu\n", total);
 

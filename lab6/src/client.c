@@ -23,47 +23,13 @@ struct Server {
 
 struct AllData
 {
-    int begin;
-    int end;
-    int p;
+    uint64_t begin;
+    uint64_t end;
+    uint64_t mod;
     int *c;
     char ip[255];
-    int port;
+    uint64_t port;
 };
-
-void ServerHanddler(void* data)
-{
-    struct AllData d=*((struct AllData*)data);
-    int f;
-    pthread_mutex_lock(&mut);
-    f=*(d.c);
-    //пока копирую из примера
-    struct hostent *hostname = gethostbyname(d.ip);   //returns a pointer to the hostent structure described above.
-    if (hostname == NULL) {
-      fprintf(stderr, "gethostbyname failed with %s\n",d.ip);
-      exit(1);
-    }
-
-    struct sockaddr_in server;
-    server.sin_family = AF_INET;
-    server.sin_port = htons(d.port);
-    server.sin_addr.s_addr = *((unsigned long *)hostname->h_addr);
-
-    int sck = socket(AF_INET, SOCK_STREAM, 0);
-    if (sck < 0) {
-      fprintf(stderr, "Socket creation failed!\n");
-      exit(1);
-    }
-
-    if (connect(sck, (struct sockaddr *)&server, sizeof(server)) < 0) {
-      fprintf(stderr, "Connection failed\n");
-      exit(1);
-    }
-    /* сюда еще перенести отправку серверу параметров для подсчета */
-    //-------------------------
-    *(d.c) = f;
-    pthread_mutex_unlock(&mut);
-}
 
 uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
   uint64_t result = 0;
@@ -91,6 +57,69 @@ bool ConvertStringToUI64(const char *str, uint64_t *val) {
 
   *val = i;
   return true;
+}
+
+void ServerHanddler(void* data)
+{
+    struct AllData d=*((struct AllData*)data);
+    int f;
+
+    //пока копирую из примера
+    struct hostent *hostname = gethostbyname(d.ip);   //returns a pointer to the hostent structure described above.
+    if (hostname == NULL) {
+      fprintf(stderr, "gethostbyname failed with %s\n",d.ip);
+      exit(1);
+    }
+
+    struct sockaddr_in server;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(d.port);
+    server.sin_addr.s_addr = *((unsigned long *)hostname->h_addr);
+
+    int sck = socket(AF_INET, SOCK_STREAM, 0);
+    if (sck < 0) {
+      fprintf(stderr, "Socket creation failed!\n");
+      exit(1);
+    }
+
+    if (connect(sck, (struct sockaddr *)&server, sizeof(server)) < 0) {
+      fprintf(stderr, "Connection failed\n");
+      exit(1);
+    }
+    char task[sizeof(uint64_t) * 3];
+    printf("begin = %llu, end = %llu, mod = %llu\n",d.begin, d.end, d.mod);
+
+    /*char value[sizeof(uint64_t*)];
+    snprintf(value, sizeof value, "%d", d.begin);
+    write(STDOUT_FILENO, value, strlen(value));*/
+
+    memcpy(task, &(d.begin), sizeof(uint64_t));
+    memcpy(task + sizeof(uint64_t), &(d.end), sizeof(uint64_t));
+    memcpy(task + 2 * sizeof(uint64_t), &(d.mod), sizeof(uint64_t));
+    //printf("begin = %d, end = %d, mod = %d\n",d.begin, d.end, d.mod);
+    //printf("%s",task);
+
+    if (send(sck, task, sizeof(task), 0) < 0) {
+      fprintf(stderr, "Send failed\n");
+      exit(1);
+    }
+
+    char response[sizeof(uint64_t)];
+    if (recv(sck, response, sizeof(response), 0) < 0) {
+      fprintf(stderr, "Recieve failed\n");
+      exit(1);
+    }
+    uint64_t answer = 0;
+    memcpy(&answer, response, sizeof(uint64_t));
+    printf("for calculation from %d to %d recieved result is: %llu\n", d.begin, d.end-1,answer);
+    //-------------------------
+    pthread_mutex_lock(&mut);
+    f=*(d.c);
+    f=MultModulo(f,answer,d.mod);
+    *(d.c) = f;
+     printf("for calculation from %d to %d afer multiplication: %d\n", d.begin, d.end-1,*(d.c));
+    pthread_mutex_unlock(&mut);
+    
 }
 
 int main(int argc, char **argv) {
@@ -232,8 +261,8 @@ int main(int argc, char **argv) {
   int it =0;
   while (fgets(buffer, sizeof(buffer), fp))
   {
-    to[it].port = 20001;
-    memcpy(to[it].ip, buffer, sizeof(buffer));
+    ConvertStringToUI64(buffer,&(to[it].port));
+    memcpy(to[it].ip,"127.0.0.1", sizeof("127.0.0.1"));
     it++;
   }
   fclose(fp);
@@ -253,7 +282,7 @@ int sizeforthread = servers_num <= k ? (k / servers_num) : 1;
             to[i].end = k + 1;
         }
         printf("Last element in thred %d: %d\n", i,to[i].end - 1);
-        to[i].p = mod;
+        to[i].mod = mod;
         to[i].c=&common;
     if (pthread_create(&threads[i], NULL, (void*)ServerHanddler, (void*)&to[i])) {
         printf("Error: pthread_create failed!\n");
