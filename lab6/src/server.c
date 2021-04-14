@@ -14,10 +14,14 @@
 
 #include "pthread.h"
 
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+ uint64_t common =1;
+
 struct FactorialArgs {
   uint64_t begin;
   uint64_t end;
   uint64_t mod;
+  uint64_t* c;
 };
 
 bool ConvertStringToUI64(const char *str, uint64_t *val) {
@@ -173,7 +177,7 @@ int main(int argc, char **argv) {
         break;
       }
 
-      //pthread_t threads[tnum];
+
 
       uint64_t begin = 0;
       uint64_t end = 0;
@@ -183,8 +187,44 @@ int main(int argc, char **argv) {
       memcpy(&mod, from_client + 2 * sizeof(uint64_t), sizeof(uint64_t));
 
       fprintf(stdout, "Receive: %llu %llu %llu\n", begin, end, mod);
+     
+      end--;
+      if ((end-begin+1)<tnum)
+        tnum=(end-begin+1);
+      pthread_t threads[tnum];
+      struct FactorialArgs arg[tnum];
+      int sizeforthread =tnum <= (end-begin+1)? ((end-begin+1) / tnum) : 1;
+      for (uint32_t i = 0; i < tnum; i++) 
+        {
+            arg[i].begin = i * sizeforthread + begin;
+            printf("First element in thred %d: %llu\n", i, arg[i].begin);
+            if (i != (tnum - 1))
+            {
+                arg[i].end = arg[i].begin + sizeforthread;
+            }
+            else {
+                arg[i].end = end + 1;
+            }
+            printf("Last element in thred %d: %llu\n", i, arg[i].end - 1);
+            arg[i].mod = mod;
+            arg[i].c=&common;
+            if (pthread_create(&threads[i], NULL, (void*)ThreadFactorial, (void*)&arg[i])) {
+                printf("Error: pthread_create failed!\n");
+                return 1;
+            }
+        }
+      uint64_t total = 1;
+      for (uint32_t i = 0; i < tnum; i++) 
+        {
+            uint64_t result = 0;
+            pthread_join(threads[i], (void **)&result);
+            total = MultModulo(total, result, mod);
+        }
 
-      struct FactorialArgs args;
+
+
+
+      
       /*for (uint32_t i = 0; i < tnum; i++) {
         // TODO: parallel somehow
         args[i].begin = 1;
@@ -204,10 +244,14 @@ int main(int argc, char **argv) {
         pthread_join(threads[i], (void **)&result);
         total = MultModulo(total, result, mod);
       }*/
+
+
+      // WITHOUT THREADS
+      /*struct FactorialArgs args;
       args.begin = begin;
       args.end = end;
       args.mod = mod;
-      uint64_t total = Factorial(&args);
+      uint64_t total = Factorial(&args);*/
 
       printf("Total: %llu\n", total);
 
