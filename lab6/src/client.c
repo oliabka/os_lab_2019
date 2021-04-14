@@ -13,6 +13,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include "multmodulo.h"
+
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 int common =1;
 
@@ -31,7 +33,7 @@ struct AllData
     uint64_t port;
 };
 
-uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
+/*uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
   uint64_t result = 0;
   a = a % mod;
   while (b > 0) {
@@ -42,7 +44,7 @@ uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
   }
 
   return result % mod;
-}
+}*/
 
 bool ConvertStringToUI64(const char *str, uint64_t *val) {
   char *end = NULL;

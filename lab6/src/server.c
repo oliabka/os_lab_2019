@@ -14,6 +14,8 @@
 
 #include "pthread.h"
 
+#include "multmodulo.h"
+
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
  uint64_t common =1;
 
@@ -24,22 +26,8 @@ struct FactorialArgs {
   uint64_t* c;
 };
 
-bool ConvertStringToUI64(const char *str, uint64_t *val) {
-  char *end = NULL;
-  unsigned long long i = strtoull(str, &end, 10);       //Convert the string to a value of type unsigned long int
-  if (errno == ERANGE) {
-    fprintf(stderr, "Out of uint64_t range: %s\n", str);
-    return false;
-  }
 
-  if (errno != 0)
-    return false;
-
-  *val = i;
-  return true;
-}
-
-uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
+/*uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
   uint64_t result = 0;
   a = a % mod;
   while (b > 0) {
@@ -49,7 +37,7 @@ uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
     b /= 2;
   }
   return result % mod;
-}
+}*/
 
 uint64_t Factorial(const struct FactorialArgs *p_args) {
   struct FactorialArgs args=*(p_args);
