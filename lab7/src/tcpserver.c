@@ -7,11 +7,62 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define SERV_PORT 10050
-#define BUFSIZE 100
+#include <getopt.h>
+
+//#define SERV_PORT 10050
+//#define BUFSIZE 100
 #define SADDR struct sockaddr
 
-int main() {
+int main(int argc, char *argv[]) {
+  int SERV_PORT = -1;
+  int BUFSIZE = -1;
+  while (1){
+        int current_optind = optind ? optind : 1;
+
+        static struct option options[] = {{"BUFSIZE", required_argument, 0, 0},
+                                        {"SERV_PORT", required_argument, 0, 0},
+                                        {0, 0, 0, 0}};
+
+        int option_index = 0;
+        int c = getopt_long(argc, argv, "", options, &option_index);
+
+        if (c == -1)
+        break;
+
+        switch (c) {
+        case 0: {
+        switch (option_index) {
+        case 0:
+                BUFSIZE = atoi(optarg);  
+                if (BUFSIZE <= 0) {
+                    printf("BUFSIZE is a positive number\n");
+                    return 1;
+                }
+            break;
+        case 1:
+                SERV_PORT = atoi(optarg);  
+                if (SERV_PORT <= 0) {
+                    printf("SERV_PORT is a positive number\n");
+                    return 1;
+                }
+            break;
+        default:
+            printf("Index %d is out of options\n", option_index);
+        }
+        } break;
+
+        case '?':
+        printf("Arguments error\n");
+        break;
+        default:
+        fprintf(stderr, "getopt returned character code 0%o?\n", c);
+        }
+    } 
+
+  if (BUFSIZE == -1 || SERV_PORT==-1) {
+    fprintf(stderr, "Using: %s --BUFSIZE 100 --SERV_PORT 10050\n", argv[0]);
+    return 1;
+  }
   const size_t kSize = sizeof(struct sockaddr_in);
 
   int lfd, cfd;
@@ -41,22 +92,22 @@ int main() {
   }
 
   while (1) {
-    unsigned int clilen = kSize;
+        unsigned int clilen = kSize;
 
-    if ((cfd = accept(lfd, (SADDR *)&cliaddr, &clilen)) < 0) {
-      perror("accept");
-      exit(1);
-    }
-    printf("connection established\n");
+        if ((cfd = accept(lfd, (SADDR *)&cliaddr, &clilen)) < 0) {
+        perror("accept");
+        exit(1);
+        }
+        printf("connection established\n");
 
-    while ((nread = read(cfd, buf, BUFSIZE)) > 0) {
-      write(1, &buf, nread);
-    }
+        while ((nread = read(cfd, buf, BUFSIZE)) > 0) {
+        write(1, &buf, nread);
+        }
 
-    if (nread == -1) {
-      perror("read");
-      exit(1);
+        if (nread == -1) {
+        perror("read");
+        exit(1);
+        }
+        close(cfd);
     }
-    close(cfd);
-  }
 }
